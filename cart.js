@@ -21,36 +21,43 @@ var MongoClient = require('mongodb').MongoClient,
 
 function CartDAO(database) {
     "use strict";
-
     this.db = database;
 
+            /*
+            * TODO-lab5
+            *
+            * LAB #5: Implement the getCart() method.
+            *
+            * Query the "cart" collection by userId and pass the cart to the
+            * callback function.
+               var userCart = {
+                        userId: userId,
+                        items: []
+              }
+              var dummyItem = this.createDummyItem();
+              userCart.items.push(dummyItem);
 
+              // TODO-lab5 Replace all code above (in this method).
+
+              // TODO Include the following line in the appropriate
+              // place within your code to pass the userCart to the
+              // callback.
+              callback(userCart);
+            */
     this.getCart = function(userId, callback) {
         "use strict";
-
-        /*
-        * TODO-lab5
-        *
-        * LAB #5: Implement the getCart() method.
-        *
-        * Query the "cart" collection by userId and pass the cart to the
-        * callback function.
-        *
-        */
-
-        var userCart = {
-            userId: userId,
-            items: []
-        }
-        var dummyItem = this.createDummyItem();
-        userCart.items.push(dummyItem);
-
-        // TODO-lab5 Replace all code above (in this method).
-
-        // TODO Include the following line in the appropriate
-        // place within your code to pass the userCart to the
-        // callback.
-        callback(userCart);
+        this.db.collection('cart', function(err, collection) {
+          if(err) throw err;
+          collection.find({'userId': userId}, {'_id':0, 'items':1})
+            .toArray(function(err, result) {
+              var userCart = {
+                userId: userId,
+                items: result[0].items
+              }
+              assert.equal(err, null);
+              callback(userCart)
+            });
+        })
     }
 
 
