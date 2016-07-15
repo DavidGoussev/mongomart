@@ -229,7 +229,6 @@ function ItemDAO(database) {
             .find({ $text: { $search: query } })
             .count(function(err, numItems){
                 if(err) throw err;
-                console.log(numItems);
                 callback(numItems);
             });
     }

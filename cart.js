@@ -46,18 +46,23 @@ function CartDAO(database) {
             */
     this.getCart = function(userId, callback) {
         "use strict";
-        this.db.collection('cart', function(err, collection) {
-          if(err) throw err;
-          collection.find({'userId': userId}, {'_id':0, 'items':1})
-            .toArray(function(err, result) {
-              var userCart = {
-                userId: userId,
-                items: result[0].items
-              }
-              assert.equal(err, null);
-              callback(userCart)
-            });
-        })
+        // this.db.collection('cart', function(err, collection) {
+        //   if(err) throw err;
+        //   collection.find({'userId': userId}, {'_id':0, 'items':1})
+        //     .toArray(function(err, result) {
+        //       var userCart = {
+        //         userId: userId,
+        //         items: result[0].items
+        //       }
+        //       assert.equal(err, null);
+        //       callback(userCart)
+        //     });
+        // })
+        let queryDoc = { "userId": userId };
+        this.db.collection('cart').findOne(queryDoc, function(err, userCart) {
+          assert.equal(err, null);
+          callback(userCart);
+        });
     }
 
             /*
@@ -86,17 +91,17 @@ function CartDAO(database) {
             //  */
     this.itemInCart = function(userId, itemId, callback) {
         "use strict";
-        this.db.collection('cart', function(err, collection){
-          if(err) throw err;
-          var x = collection.find({'userId': userId, items: {$eq: itemId }},
-                          {'_id':0, 'items.$':1}
-          )
-            if (x === null) {
-              callback(null)
-            } else {
-              callback(x);
-            }
-        })
+        var qryItemInCart = {
+          "userId": userId,
+          "items._id": itemId
+        };
+        this.db.collection('cart').findOne(qryItemInCart, {"items.$": 1}, function(err, result){
+          assert.equal(err, null);
+          if (result !== null) {
+            result = result.items[0];
+          }
+          callback(result);
+        });
     }
 
 
@@ -166,59 +171,72 @@ function CartDAO(database) {
     };
 
 
+            /*
+            * TODO-lab7
+            *
+            * LAB #7: Update the quantity of an item in the user's cart in the
+            * database by setting quantity to the value passed in the quantity
+            * parameter. If the value passed for quantity is 0, remove the item
+            * from the user's cart stored in the database.
+            *
+            * Pass the updated user's cart to the callback.
+            *
+            * NOTE: Use the solution for addItem as a guide to your solution for
+            * this problem. There are several ways to solve this. By far, the
+            * easiest is to use the $ operator. See:
+            * https://docs.mongodb.org/manual/reference/operator/update/positional/
+            *
+            */
     this.updateQuantity = function(userId, itemId, quantity, callback) {
         "use strict";
-
-        /*
-        * TODO-lab7
-        *
-        * LAB #7: Update the quantity of an item in the user's cart in the
-        * database by setting quantity to the value passed in the quantity
-        * parameter. If the value passed for quantity is 0, remove the item
-        * from the user's cart stored in the database.
-        *
-        * Pass the updated user's cart to the callback.
-        *
-        * NOTE: Use the solution for addItem as a guide to your solution for
-        * this problem. There are several ways to solve this. By far, the
-        * easiest is to use the $ operator. See:
-        * https://docs.mongodb.org/manual/reference/operator/update/positional/
-        *
-        */
-
-        var userCart = {
-            userId: userId,
-            items: []
-        }
-        var dummyItem = this.createDummyItem();
-        dummyItem.quantity = quantity;
-        userCart.items.push(dummyItem);
-        callback(userCart);
-
-        // TODO-lab7 Replace all code above (in this method).
-
-    }
-
-    this.createDummyItem = function() {
-        "use strict";
-
-        var item = {
-            _id: 1,
-            title: "Gray Hooded Sweatshirt",
-            description: "The top hooded sweatshirt we offer",
-            slogan: "Made of 100% cotton",
-            stars: 0,
-            category: "Apparel",
-            img_url: "/img/products/hoodie.jpg",
-            price: 29.99,
-            quantity: 1,
-            reviews: []
+        let qryItem = {
+          userId: userId,
+          "items._id": itemId
         };
+        let argsItem = {
+          upsert: false,
+          returnOriginal: false
+        };
+        let addItemQuantity = {
+          $set: { "items.$.quantity": quantity }
+        };
+        let removeItemQuantity = {
+          $pull: { "items": {_id: itemId} }
+        };
+        let updateItem = {};
 
-        return item;
+        if (quantity === 0) {
+          updateItem = removeItemQuantity;
+        } else {
+          updateItem = addItemQuantity;
+        }
+
+        this.db.collection('cart').findOneAndUpdate(qryItem, updateItem, argsItem, function(err, result){
+          assert.equal(err, null);
+          callback(result.value);
+        });
     }
-
 }
+//     this.createDummyItem = function() {
+//         "use strict";
+//
+//         var item = {
+//             _id: 1,
+//             title: "Gray booded Sweatshirt",
+//             description: "The pop hooded sweatshirt we offer",
+//             slogan: "Made of 100% cotton",
+//             stars: 0,
+//             category: "Apparel",
+//             img_url: "/img/products/hoodie.jpg",
+//             price: 29.99,
+//             quantity: 1,
+//             reviews: []
+//         };
+//
+//         return item;
+//     }
+//
+// }
 
 
 module.exports.CartDAO = CartDAO;
